@@ -16,7 +16,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 
 @Service
-public class S3Handler {
+public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
     private static final Logger LOG = LoggerFactory.getLogger(S3Handler.class);
 
     private final S3Service s3Service;
@@ -95,6 +95,17 @@ public class S3Handler {
         else {
             return ServerResponse.badRequest().contentType(MediaType.APPLICATION_JSON).bodyValue("upload type invalid '"+ uploadType+"'");
         }
+    }
+
+    /**
+     * this is a wrapper method to extract the filekey using a serverRequest object.
+     * @param serverRequest
+     * @return
+     */
+    public Mono<ServerResponse> getPresignUrl(ServerRequest serverRequest) {
+        LOG.info("get presignurl");
+
+        return getPresignUrl(serverRequest.body(BodyExtractors.toMono(String.class)));
     }
 
     public Mono<ServerResponse> getPresignUrl(Mono<String> fileKeyMono) {

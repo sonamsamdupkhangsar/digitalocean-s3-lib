@@ -55,7 +55,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/sonamsamdupkhangsar/sonam-s3-lib")
+            url = uri("https://maven.pkg.github.com/sonamsamdupkhangsar/digitalocean-s3-lib")
             credentials {
                 username = System.getenv("USERNAME")
                 password = System.getenv("PERSONAL_ACCESS_TOKEN")
@@ -66,7 +66,7 @@ publishing {
         create<MavenPublication>("maven") {
             from(components["java"])
             groupId = "cloud.sonam"
-            artifactId = "sonam-s3-lib"
+            artifactId = "digitalocean-s3-lib"
             version = "1.0.0-SNAPSHOT"
         }
     }

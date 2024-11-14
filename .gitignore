@@ -24,7 +24,7 @@ hs_err_pid*
 replay_pid*
 
 .idea/
-sonam-s3-lib.iml
+digitalocean-s3-lib.iml
 # Ignore Gradle project-specific cache directory
 .gradle
 

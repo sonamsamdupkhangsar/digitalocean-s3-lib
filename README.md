@@ -17,8 +17,8 @@ Publish to local Maven repository:
 ```
 
 
-### Add this project as dependency in your project
-First add this dependency in to your Gradle settings file
+### Add this project as dependency
+For Gradle projects add to your settings file
 ```
 implementation("cloud.sonam:digitalocean-s3-lib:1.0.0-SNAPSHOT")
 ```

@@ -2,6 +2,7 @@ package cloud.sonam.s3;
 
 import cloud.sonam.s3.config.S3ClientConfigurationProperties;
 import cloud.sonam.s3.file.S3FileUploadService;
+import cloud.sonam.s3.file.S3Handler;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,11 +17,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.reactive.function.server.ServerResponse;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -30,22 +33,25 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
- * This will test the Router endpoints for uploading files, create thumbnail and get presign url
+ * This will test the S3Handler methods for uploading file, creating thumbnail and get presign url.
  */
 
 @EnableAutoConfiguration
 @RunWith(SpringRunner.class)
 @ExtendWith(SpringExtension.class)
 @SpringBootTest( webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class S3RestServiceMockTest {
-    private static final Logger LOG = LoggerFactory.getLogger(S3RestServiceMockTest.class);
+public class S3HandlerTest {
+    private static final Logger LOG = LoggerFactory.getLogger(S3HandlerTest.class);
 
     @Autowired
     private WebTestClient client;
@@ -64,6 +70,9 @@ public class S3RestServiceMockTest {
 
     @SpyBean
     private S3FileUploadService s3Service;
+
+    @Autowired
+    private S3Handler s3Handler;
 
     @Test
     public void uploadVideoFile() throws IOException, InterruptedException {
@@ -95,14 +104,17 @@ public class S3RestServiceMockTest {
 
         Mockito.doReturn(Mono.just(video.getURL())).when(s3Service).createPresignedUrl(Mockito.any(Mono.class));
 
-        client.post().uri("/upload?uploadType=video")
-                .header("filename", video.getFilename())
-                .header("format", "video/mp4")
-                .header(HttpHeaders.CONTENT_LENGTH, ""+video.contentLength())
-                .bodyValue(video)
-                .exchange().expectStatus().isOk()
-                .expectBody(String.class)
-                .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));
+        Flux<ByteBuffer> byteBufferFlux = Flux.just(ByteBuffer.wrap(video.getContentAsByteArray()));
+
+        final String folder = ""; // no specific folder just use default one
+        Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "video", video.getFilename(),  "video/mp4",
+                OptionalLong.of(video.contentLength()), folder);
+
+        StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
+            assertTrue(serverResponse.statusCode().is2xxSuccessful());
+            LOG.info("verified response is ok");
+            return true;
+        }).verifyComplete();
     }
 
     @Test
@@ -138,14 +150,17 @@ public class S3RestServiceMockTest {
 
         Mockito.doReturn(Mono.just(langurPhoto.getURL())).when(s3Service).createPresignedUrl(Mockito.any(Mono.class));
 
-        client.post().uri("/upload?uploadType=photo")
-                .header("filename", langurPhoto.getFilename())
-                .header("format", "image/jpg")
-                .header(HttpHeaders.CONTENT_LENGTH, ""+langurPhoto.contentLength())
-                .bodyValue(langurPhoto)
-                .exchange().expectStatus().isOk()
-                .expectBody(String.class)
-                .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));
+
+        Flux<ByteBuffer> byteBufferFlux = Flux.just(ByteBuffer.wrap(langurPhoto.getContentAsByteArray()));
+
+        final String folder = ""; // no specific folder just use default one
+        Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "photo", langurPhoto.getFilename(),  "image/jpg", OptionalLong.of(langurPhoto.contentLength()), folder);
+
+        StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
+            assertTrue(serverResponse.statusCode().is2xxSuccessful());
+            LOG.info("verified response is ok");
+            return true;
+        }).verifyComplete();
     }
 
     @Test
@@ -179,14 +194,17 @@ public class S3RestServiceMockTest {
         //send the langurPhoto inputstream when inputStream is request from mockUrl
         when(mockUrl.openStream()).thenReturn(this.langurPhoto.getInputStream());
 
-        client.post().uri("/upload?uploadType=file")
-                .header("filename", langurPhoto.getFilename())
-                .header("format", "image/jpg")
-                .header(HttpHeaders.CONTENT_LENGTH, ""+langurPhoto.contentLength())
-                .bodyValue(langurPhoto)
-                .exchange().expectStatus().isOk()
-                .expectBody(String.class)
-                .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));
+
+        Flux<ByteBuffer> byteBufferFlux = Flux.just(ByteBuffer.wrap(langurPhoto.getContentAsByteArray()));
+
+        final String folder = ""; // no specific folder just use default one
+        Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "file", langurPhoto.getFilename(),  "image/jpg", OptionalLong.of(langurPhoto.contentLength()), folder);
+
+        StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
+            assertTrue(serverResponse.statusCode().is2xxSuccessful());
+            LOG.info("verified response is ok");
+            return true;
+        }).verifyComplete();
     }
 
 
@@ -194,10 +212,13 @@ public class S3RestServiceMockTest {
     public void getPresignUrl() {
         LOG.info("create presign url");
 
-        client.post().uri("/presignurl").bodyValue("videoapp/1/video/2022-06-13T11:23:44.893698.mp4")
-                .exchange().expectStatus().isOk()
-                .expectBody(String.class)
-                .consumeWith(stringEntityExchangeResult -> LOG.info("presignUrl: {}", stringEntityExchangeResult.getResponseBody()));
+        Mono<ServerResponse> serverResponseMono = s3Handler.getPresignUrl(Mono.just("videoapp/1/video/2022-06-13T11:23:44.893698.mp4"));
 
+        StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
+            assertTrue(serverResponse.statusCode().is2xxSuccessful());
+            LOG.info("verified response is ok");
+            return true;
+        }).verifyComplete();
     }
+
 }

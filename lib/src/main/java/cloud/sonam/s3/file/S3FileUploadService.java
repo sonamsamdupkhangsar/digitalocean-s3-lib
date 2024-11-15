@@ -323,10 +323,6 @@ public class S3FileUploadService implements S3Service {
             graphics.drawImage(originalImage, 0, 0, thumbnailWidth, thumbnailHeight, null);
             graphics.dispose();
 
-            // Save the thumbnail image
-            File outputFile = new File("thumbnail.jpg");
-            ImageIO.write(thumbnailImage, "jpg", outputFile);
-
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ImageIO.write(thumbnailImage, "jpg", baos);
 

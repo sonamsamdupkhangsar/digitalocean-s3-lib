@@ -59,14 +59,17 @@ The main properties are:
 ### Java Api usage
 You can directly use the `S3ServiceHandler.class` or use the `S3WebRequestHandler.class` interface.  Like the name implies the S3WebRequestHandler can take the ServerRequest object and extract the required fields to upload file. 
 
-For a video file upload which will also create a small thumbnail (currently the animation is not working :-()
-The required fields for uploading using a web request can be seen in the `S3RestServiceMockTest.class`:
+For a video file upload which will also create a small thumbnail (currently the animation is not working :-())
+The required fields for uploading using a web request can be seen in the `S3RestServiceTest.class`:
 ```
-   client.post().uri("/upload?uploadType=video")
-                .header("filename", video.getFilename())
-                .header("format", "video/mp4")
-                .header(HttpHeaders.CONTENT_LENGTH, ""+video.contentLength())
-                .bodyValue(video)
+
+client.post().uri("/upload?uploadType=video&folder="+ date)
+    .header("filename", video.getFilename())
+    .header("format", "video/mp4")
+    .header("acl", "private")
+    .header(HttpHeaders.CONTENT_LENGTH, ""+video.contentLength())
+    .bodyValue(video)
+    .exchange().expectStatus().isOk()
 ```
 
 The following is an example of an upload for photo with thumbnail dimension in query param:

@@ -65,7 +65,8 @@ public class S3FileUploadService implements S3Service {
         s3Presigner.close();
     }
 
-    public Mono<String> uploadFile(Flux<ByteBuffer> body, String prefixPath, String fileName, String format, OptionalLong optionalLong) {
+    public Mono<String> uploadFile(Flux<ByteBuffer> body, String prefixPath, String fileName, String format,
+                                   OptionalLong optionalLong, ObjectCannedACL acl) {
             LOG.info("uploadVideo with filePart");
             LocalDateTime localDateTime = LocalDateTime.now();
             String extension = "";
@@ -100,7 +101,7 @@ public class S3FileUploadService implements S3Service {
                                     .key(fileKey)
                                     .contentType(format)
                                     .metadata(metadata)
-                                    .acl(ObjectCannedACL.PUBLIC_READ)
+                                    .acl(acl)
                                     .build(),
                             AsyncRequestBody.fromPublisher(body));
             return Mono.fromFuture(future).map(response -> {
@@ -112,11 +113,11 @@ public class S3FileUploadService implements S3Service {
     }
 
     @Override
-    public Mono<String> createPhotoThumbnail(final URL presignedUrl, final String prefixPath) {
+    public Mono<String> createPhotoThumbnail(final URL presignedUrl, final String prefixPath, ObjectCannedACL acl, Dimension thumbnail) {
         LOG.info("Create thumbnail for photo presignedUrl: {}", presignedUrl);
         LocalDateTime localDateTime = LocalDateTime.now();
 
-        ByteArrayOutputStream byteArrayOutputStream = getPhotoByteArrayOutputStream(presignedUrl);
+        ByteArrayOutputStream byteArrayOutputStream = getPhotoByteArrayOutputStream(presignedUrl, thumbnail);
 
         if (byteArrayOutputStream == null) {
             LOG.error("byteArrayOutputStream is null from getPhotoByteArrayOutputStream call");
@@ -124,11 +125,11 @@ public class S3FileUploadService implements S3Service {
         }
 
         String thumbKey = prefixPath + "thumbnail/" + localDateTime + "." + "png";
-        return saveContentBytesToS3(byteArrayOutputStream, thumbKey);
+        return saveContentBytesToS3(byteArrayOutputStream, thumbKey, acl);
 
     }
 
-    private Mono<String> saveContentBytesToS3(ByteArrayOutputStream byteArrayOutputStream, final String fileKey) {
+    private Mono<String> saveContentBytesToS3(ByteArrayOutputStream byteArrayOutputStream, final String fileKey, ObjectCannedACL acl) {
         byte[] bytes = byteArrayOutputStream.toByteArray();
         ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
 
@@ -145,7 +146,7 @@ public class S3FileUploadService implements S3Service {
                                 .key(fileKey)
                                 .contentType("image/png")
                                 .metadata(metadata)
-                                .acl(ObjectCannedACL.PUBLIC_READ)
+                                .acl(acl)
                                 .build(),
                         AsyncRequestBody.fromPublisher(Flux.just(byteBuffer)));
 
@@ -159,7 +160,7 @@ public class S3FileUploadService implements S3Service {
     }
 
     @Override
-    public Mono<String> createGif(URL presignedUrl, final String prefixPath) {
+    public Mono<String> createGif(URL presignedUrl, final String prefixPath, ObjectCannedACL acl) {
         try {
             InputStream inputStream = presignedUrl.openStream();//new URL(s3config.getSubdomain() + fileKey).openStream();
             File tempFile = File.createTempFile(UUID.randomUUID().toString(), ".gif");
@@ -183,7 +184,7 @@ public class S3FileUploadService implements S3Service {
                                     .key(gifKey)
                                     .contentType("image/gif")
                                     .metadata(metadata2)
-                                    .acl(ObjectCannedACL.PUBLIC_READ)
+                                    .acl(acl)
                                     .build(),
                            tempFile.toPath());
                            // AsyncRequestBody.fromPublisher(Flux.just(byteBuffer)));
@@ -298,18 +299,21 @@ public class S3FileUploadService implements S3Service {
         return null;
     }
 
-    private ByteArrayOutputStream getPhotoByteArrayOutputStream(final URL presignedUrl) {
+    private ByteArrayOutputStream getPhotoByteArrayOutputStream(final URL presignedUrl, Dimension thumbnail) {
         try {
             InputStream inputStream = presignedUrl.openStream();
             // Load the original image
             BufferedImage originalImage = ImageIO.read(inputStream);
 
-            // Set the thumbnail size
-            int thumbnailWidth = 100;
-            int thumbnailHeight = 100;
+            Dimension dimension = getScaledDimension(new Dimension(originalImage.getWidth(), originalImage.getHeight()),
+                    thumbnail);
+
+            int width = (int) dimension.getWidth();
+            int height = (int) dimension.getHeight();
+            LOG.info("scaled width: {} height: {}", width, height);
 
             // Create a new image for the thumbnail
-            BufferedImage thumbnailImage = new BufferedImage(thumbnailWidth, thumbnailHeight, BufferedImage.TYPE_INT_RGB);
+            BufferedImage thumbnailImage = new BufferedImage(width,height, BufferedImage.TYPE_INT_RGB);
 
             // Get the graphics context of the thumbnail image
             Graphics2D graphics = thumbnailImage.createGraphics();
@@ -320,7 +324,7 @@ public class S3FileUploadService implements S3Service {
             graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
             // Draw the original image onto the thumbnail image, scaling it to fit
-            graphics.drawImage(originalImage, 0, 0, thumbnailWidth, thumbnailHeight, null);
+            graphics.drawImage(originalImage, 0, 0, width, height, null);
             graphics.dispose();
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -335,6 +339,36 @@ public class S3FileUploadService implements S3Service {
             return null;
         }
     }
+
+    private static Dimension getScaledDimension(Dimension imgSize, Dimension boundary) {
+        LOG.debug("get scaled dimension for thumbnail");
+
+        int originalWidth = imgSize.width;
+        int originalHeight = imgSize.height;
+        int bound_width = boundary.width;
+        int bound_height = boundary.height;
+        int newWidth = originalWidth;
+        int newHeight = originalHeight;
+
+        // first check if we need to scale width
+        if (originalWidth > bound_width) {
+            //scale width to fit
+            newWidth = bound_width;
+            //scale height to maintain aspect ratio
+            newHeight = (newWidth * originalHeight) / originalWidth;
+        }
+
+        // then check if we need to scale even with the new height
+        if (newHeight > bound_height) {
+            //scale height to fit instead
+            newHeight = bound_height;
+            //scale width to maintain aspect ratio
+            newWidth = (newHeight * originalWidth) / originalHeight;
+        }
+
+        return new Dimension(newWidth, newHeight);
+    }
+
 
     private void getGifBytes(InputStream inputStream, int startFrame, int frameCount, Integer frameRate, Integer margin, OutputStream outputStream) {
         try {
@@ -379,14 +413,14 @@ public class S3FileUploadService implements S3Service {
         }
     }
 
-    public Mono<String> createVideoThumbnail(String fileKey, final String prefixPath) {
+    public Mono<String> createVideoThumbnail(String fileKey, final String prefixPath, ObjectCannedACL acl) {
         LOG.info("Create thumbnail for video fileKey: {}", fileKey);
         LocalDateTime localDateTime = LocalDateTime.now();
 
         ByteArrayOutputStream byteArrayOutputStream = getVideoByteArrayOutputStream(fileKey, "png");
 
         String thumbKey = prefixPath + "thumbnail/" + localDateTime + "." + "png";
-        return saveContentBytesToS3(byteArrayOutputStream, thumbKey);
+        return saveContentBytesToS3(byteArrayOutputStream, thumbKey, acl);
     }
 
 }

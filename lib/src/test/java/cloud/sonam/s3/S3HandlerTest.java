@@ -27,9 +27,11 @@ import reactor.test.StepVerifier;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
+import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
@@ -108,7 +110,7 @@ public class S3HandlerTest {
 
         final String folder = ""; // no specific folder just use default one
         Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "video", video.getFilename(),  "video/mp4",
-                OptionalLong.of(video.contentLength()), folder);
+                OptionalLong.of(video.contentLength()), folder, ObjectCannedACL.PRIVATE, new Dimension(100, 100));
 
         StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
             assertTrue(serverResponse.statusCode().is2xxSuccessful());
@@ -154,7 +156,8 @@ public class S3HandlerTest {
         Flux<ByteBuffer> byteBufferFlux = Flux.just(ByteBuffer.wrap(langurPhoto.getContentAsByteArray()));
 
         final String folder = ""; // no specific folder just use default one
-        Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "photo", langurPhoto.getFilename(),  "image/jpg", OptionalLong.of(langurPhoto.contentLength()), folder);
+        Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "photo", langurPhoto.getFilename(),
+                "image/jpg", OptionalLong.of(langurPhoto.contentLength()), folder, ObjectCannedACL.PRIVATE,new Dimension(100, 100));
 
         StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
             assertTrue(serverResponse.statusCode().is2xxSuccessful());
@@ -198,7 +201,8 @@ public class S3HandlerTest {
         Flux<ByteBuffer> byteBufferFlux = Flux.just(ByteBuffer.wrap(langurPhoto.getContentAsByteArray()));
 
         final String folder = ""; // no specific folder just use default one
-        Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "file", langurPhoto.getFilename(),  "image/jpg", OptionalLong.of(langurPhoto.contentLength()), folder);
+        Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "file", langurPhoto.getFilename(),
+                "image/jpg", OptionalLong.of(langurPhoto.contentLength()), folder, ObjectCannedACL.PRIVATE, null);
 
         StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
             assertTrue(serverResponse.statusCode().is2xxSuccessful());

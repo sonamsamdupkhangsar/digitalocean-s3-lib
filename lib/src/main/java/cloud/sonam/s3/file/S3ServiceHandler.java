@@ -15,7 +15,7 @@ import java.util.OptionalLong;
  */
 public interface S3ServiceHandler {
     Mono<ServerResponse> upload(Flux<ByteBuffer> byteBufferFlux, final String uploadType, final String fileName,
-                                final String format, final OptionalLong fileContentLength, final String folder,
+                                final String format, final long fileContentLength, final String folder,
                                 ObjectCannedACL acl, Dimension thumbnail);
     Mono<ServerResponse> getPresignUrl(Mono<String> fileKeyMono);
 }

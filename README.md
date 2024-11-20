@@ -45,6 +45,9 @@ aws:
     imageAclHeader: x-amz-acl
     imageAclValue: public-read
     presignDurationInMinutes: 60
+    thumbnailSize:
+      width: 100
+      height: 100    
 ```
 
 The main properties are:
@@ -62,24 +65,27 @@ You can directly use the `S3ServiceHandler.class` or use the `S3WebRequestHandle
 For a video file upload which will also create a small thumbnail (currently the animation is not working :-())
 The required fields for uploading using a web request can be seen in the `S3RestServiceTest.class`:
 ```
+MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", video);
 
-client.post().uri("/upload?uploadType=video&folder="+ date)
-    .header("filename", video.getFilename())
-    .header("format", "video/mp4")
+client.post().uri("/upload?uploadType=video&folder="+ date+"&thumbnailWidth=200&thumbnailHeight=200")
+    .contentType(MediaType.MULTIPART_FORM_DATA)
+    .body(BodyInserters.fromMultipartData(body))
     .header("acl", "private")
-    .header(HttpHeaders.CONTENT_LENGTH, ""+video.contentLength())
-    .bodyValue(video)
     .exchange().expectStatus().isOk()
+    .expectBody(String.class)
 ```
 
 The following is an example of an upload for photo with thumbnail dimension in query param:
 ```
+MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+body.add("file", langurPhoto);
+
 client.post().uri("/upload?uploadType=photo&folder="+ LocalDate.now()+"&thumbnailWidth=200&thumbnailHeight=200")
-                .header("filename", langurPhoto.getFilename())
-                .header("format", "image/jpg")
-                .header("acl", "private")
-                .header(HttpHeaders.CONTENT_LENGTH, ""+langurPhoto.contentLength())
-                .bodyValue(langurPhoto)
+    .header("acl", "private")
+    .body(BodyInserters.fromMultipartData(body))
+    .exchange().expectStatus().isOk()
+    .expectBody(String.class)
 ```
 
 The `acl` header value will control whether to set the object(photo/video/file) to public read access or private only.  For private objects, you will require a presigned url to access them.

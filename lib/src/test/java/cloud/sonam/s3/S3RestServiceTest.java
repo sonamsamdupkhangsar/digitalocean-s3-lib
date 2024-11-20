@@ -14,9 +14,13 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.BodyInserters;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 import java.io.IOException;
@@ -68,12 +72,13 @@ public class S3RestServiceTest {
         client = client.mutate().responseTimeout(Duration.ofSeconds(10)).build();
         final String date = LocalDate.now().toString();
 
-        client.post().uri("/upload?uploadType=video&folder="+ date)
-                .header("filename", video.getFilename())
-                .header("format", "video/mp4")
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", video);
+
+        client.post().uri("/upload?uploadType=video&folder="+ date+"&thumbnailWidth=200&thumbnailHeight=200")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(body))
                 .header("acl", "private")
-                .header(HttpHeaders.CONTENT_LENGTH, ""+video.contentLength())
-                .bodyValue(video)
                 .exchange().expectStatus().isOk()
                 .expectBody(String.class)
                 .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));
@@ -88,13 +93,12 @@ public class S3RestServiceTest {
         Assert.assertTrue(langurPhoto.getFile().exists());
 
         client = client.mutate().responseTimeout(Duration.ofSeconds(10)).build();
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", langurPhoto);
 
         client.post().uri("/upload?uploadType=photo&folder="+ LocalDate.now()+"&thumbnailWidth=200&thumbnailHeight=200")
-                .header("filename", langurPhoto.getFilename())
-                .header("format", "image/jpg")
                 .header("acl", "private")
-                .header(HttpHeaders.CONTENT_LENGTH, ""+langurPhoto.contentLength())
-                .bodyValue(langurPhoto)
+                .body(BodyInserters.fromMultipartData(body))
                 .exchange().expectStatus().isOk()
                 .expectBody(String.class)
                 .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));
@@ -110,12 +114,12 @@ public class S3RestServiceTest {
 
         client = client.mutate().responseTimeout(Duration.ofSeconds(10)).build();
 
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", langurPhoto);
+
         client.post().uri("/upload?uploadType=file&folder="+ LocalDate.now())
-                .header("filename", langurPhoto.getFilename())
-                .header("format", "image/jpg")
+                .body(BodyInserters.fromMultipartData(body))
                 .header("acl", "private")
-                .header(HttpHeaders.CONTENT_LENGTH, ""+langurPhoto.contentLength())
-                .bodyValue(langurPhoto)
                 .exchange().expectStatus().isOk()
                 .expectBody(String.class)
                 .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));

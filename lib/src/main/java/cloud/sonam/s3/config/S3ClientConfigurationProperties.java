@@ -36,6 +36,7 @@ public class S3ClientConfigurationProperties {
     private String fileAclValue;
 
     private int presignDurationInMinutes;
+    private ThumbnailSize thumbnailSize;
 
     // AWS S3 requires that file parts must have at least 5MB, except
     // for the last part. This may change for other S3-compatible services, so let't
@@ -52,7 +53,6 @@ public class S3ClientConfigurationProperties {
         }
         return region;
     }
-
     public void setRegionUrl(String regionUrl) {
         this.regionUrl = regionUrl;
     }
@@ -160,4 +160,36 @@ public class S3ClientConfigurationProperties {
     public void setFilePath(String filePath) {
         this.filePath = filePath;
     }
+
+    public ThumbnailSize getThumbnailSize() {
+        return thumbnailSize;
+    }
+
+    public void setThumbnailSize(ThumbnailSize thumbnailSize) {
+        this.thumbnailSize = thumbnailSize;
+    }
+
+
+    public static class ThumbnailSize {
+        private int width;
+        private int height;
+
+        public int getWidth() {
+            return width;
+        }
+
+        public void setWidth(int width) {
+            this.width = width;
+        }
+
+        public int getHeight() {
+            return height;
+        }
+
+        public void setHeight(int height) {
+            this.height = height;
+        }
+    }
 }
+
+

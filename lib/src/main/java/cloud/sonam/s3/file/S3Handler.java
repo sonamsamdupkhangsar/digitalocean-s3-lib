@@ -3,7 +3,10 @@ package cloud.sonam.s3.file;
 import cloud.sonam.s3.config.S3ClientConfigurationProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.http.codec.multipart.Part;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyExtractors;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -14,6 +17,8 @@ import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 
 import java.awt.*;
 import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 
@@ -32,59 +37,69 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
 
 
     public Mono<ServerResponse> upload(ServerRequest serverRequest) {
-        String folder = "";
+        Dimension thumbnailDimension = getDimension(serverRequest);
 
-        if (serverRequest.queryParam("folder").isPresent()) {
-            folder = serverRequest.queryParam("folder").get() + "/";
-            LOG.info("user specified a additional path/folder name: {}", folder);
-        }
-        Flux<ByteBuffer> byteBufferFlux = serverRequest.body(BodyExtractors.toFlux(ByteBuffer.class));
-        final String fileName = serverRequest.headers().firstHeader("filename");
-        final String format = serverRequest.headers().firstHeader("format");
-        final OptionalLong optionalLong = serverRequest.headers().contentLength();
+        LOG.info("got a request for upload");
+
         final Optional<String> optionalUploadType = serverRequest.queryParam("uploadType");
         if (optionalUploadType.isEmpty()) {
             return ServerResponse.badRequest().contentType(MediaType.APPLICATION_JSON).bodyValue("upload type not specified");
         }
         final String uploadType = optionalUploadType.get();
 
-        ObjectCannedACL acl = ObjectCannedACL.PRIVATE;
+        LOG.info("serverRequest headers: {}", serverRequest.headers());
+        return serverRequest.multipartData().flatMapIterable(Map::values)
+                .next()
+                .flatMap(parts -> {
+                    LOG.info("parts.size: {}, parts: {}", parts.size(), parts);
+                    Part part = parts.getFirst();
+                    LOG.info("part: {}", part);
 
-        String aclValue = serverRequest.headers().firstHeader("acl");
-        if (aclValue == null) {
-            LOG.warn("no acl value supplied, set to private by default");
-        }
-        else {
-            acl = ObjectCannedACL.fromValue(aclValue);
-        }
+                    FilePart filePart = (FilePart) parts.getFirst();//"file");
 
-        Dimension thumbnailDimension = new Dimension(100, 100);
+                    LOG.info("filePart: {}", filePart);
+                    final String fileName = filePart.filename();
+                    MediaType contentType = filePart.headers().getContentType();
+                    final String fileFormat = getFileFormat(contentType, fileName);
 
-        if (serverRequest.queryParam("thumbnailWidth").isPresent()) {
-            int width = Integer.parseInt(serverRequest.queryParam("thumbnailWidth").get());
-            int height =  Integer.parseInt(serverRequest.queryParam("thumbnailHeight").get());
-            thumbnailDimension.setSize(width, height);
-            LOG.info("use width and height from query param, width: {}, height: {}", width, height);
-        }
+                    long fileSize = filePart.headers().getContentLength();
 
-        return upload( byteBufferFlux, uploadType, fileName, format, optionalLong, folder, acl, thumbnailDimension);
+                    String folder = "";
+                    if (serverRequest.queryParam("folder").isPresent()) {
+                        folder = serverRequest.queryParam("folder").get() + "/";
+                        LOG.info("user specified a additional path/folder name: {}", folder);
+                    }
+                    String aclValue = serverRequest.headers().firstHeader("acl");
+
+                    ObjectCannedACL acl = ObjectCannedACL.PRIVATE;
+                    if (aclValue == null) {
+                        LOG.warn("no acl value supplied, set to private by default");
+                    } else {
+                        acl = ObjectCannedACL.fromValue(aclValue);
+                    }
+                    LOG.info("fileName: {}, fileFormat: {}, fileSize: {}", fileName, fileFormat, fileSize);
+                    Flux<ByteBuffer> byteBufferFlux = filePart.content().flatMapSequential(dataBuffer -> Flux.fromIterable(dataBuffer::readableByteBuffers));
+
+                    return upload(byteBufferFlux, uploadType, fileName, fileFormat, fileSize, folder, acl, thumbnailDimension);
+                });
     }
 
     public Mono<ServerResponse> upload(Flux<ByteBuffer> byteBufferFlux, final String uploadType, final String fileName,
-                                       final String format, final OptionalLong fileContentLength, final String folder,
+                                       final String format, final long fileContentLength, final String folder,
                                        ObjectCannedACL acl, Dimension thumbnail) {
         LOG.info("upload file of type: {}", uploadType);
+        LocalDateTime localDateTime = LocalDateTime.now();
 
         if (uploadType.equalsIgnoreCase("video") || uploadType.equalsIgnoreCase("photo")) {
 
             if (uploadType.equals("video")) {
                 final String prefixPath = s3ClientConfigurationProperties.getVideoPath() + folder;
 
-                return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, format, fileContentLength, acl)
+                return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, format, fileContentLength, acl, localDateTime)
                     .doOnNext(s -> LOG.info("Video upload done, creating video thumbnail next."))
                         .flatMap(fileKey -> s3Service.createPresignedUrl(Mono.just(fileKey)))
                         .doOnNext(presignedUrl -> LOG.info("presigned url: {}", presignedUrl))
-                        .flatMap(presigneUrl -> s3Service.createGif(presigneUrl, prefixPath, acl))
+                        .flatMap(presigneUrl -> s3Service.createGif(localDateTime, presigneUrl, prefixPath, acl, fileName, format, thumbnail))
                         .doOnNext(s -> LOG.info("Video thumbnail done."))
                         .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
                         .onErrorResume(throwable -> ServerResponse.badRequest()
@@ -94,11 +109,11 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
             else {
                 final String prefixPath = s3ClientConfigurationProperties.getPhotoPath() + folder;
 
-                return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, format, fileContentLength, acl)
+                return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, format, fileContentLength, acl, localDateTime)
                         .doOnNext(s -> LOG.info("photo upload done, creating photo thumbnail next."))
                         .flatMap(fileKey -> s3Service.createPresignedUrl(Mono.just(fileKey)))
                         .doOnNext(presignedUrl -> LOG.info("presigned url: {}", presignedUrl))
-                        .flatMap(fileKey -> s3Service.createPhotoThumbnail(fileKey, prefixPath, acl, thumbnail))
+                        .flatMap(presignedUrl -> s3Service.createPhotoThumbnail(localDateTime, presignedUrl, prefixPath, acl, fileName, format, thumbnail))
                         .doOnNext(s -> LOG.info("Photo thumbnail done."))
                         .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
                         .onErrorResume(throwable -> ServerResponse.badRequest()
@@ -109,7 +124,7 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
         else if (uploadType.equalsIgnoreCase("file")) {
             String prefixPath = s3ClientConfigurationProperties.getFilePath();
 
-            return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, format, fileContentLength, acl)
+            return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, format, fileContentLength, acl, localDateTime)
                     .doOnNext(s -> LOG.info("file upload done."))
                     .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
                     .onErrorResume(throwable -> ServerResponse.badRequest()
@@ -142,4 +157,37 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
                         .bodyValue(throwable.getMessage()));
     }
 
+    private String getFileFormat(MediaType contentType, String filename) {
+        // Use contentType or filename to determine the file format
+        // For example:
+        if (contentType != null && contentType.getType().equals("image")) {
+            return contentType.getSubtype(); // e.g., "jpeg", "png", etc.
+        } else {
+            // Use filename extension if contentType is not reliable
+            String[] parts = filename.split("\\.");
+            if (parts.length > 1) {
+                return parts[parts.length - 1];
+            }
+        }
+        return "unknown"; // Default if format can't be determined
+    }
+
+    private Dimension getDimension(ServerRequest serverRequest) {
+        Dimension thumbnailDimension = new Dimension(s3ClientConfigurationProperties.getThumbnailSize().getWidth(),
+                s3ClientConfigurationProperties.getThumbnailSize().getHeight());
+
+        if (serverRequest.queryParam("thumbnailWidth").isPresent()) {
+            try {
+                int width = Integer.parseInt(serverRequest.queryParam("thumbnailWidth").get());
+                int height = Integer.parseInt(serverRequest.queryParam("thumbnailHeight").get());
+                thumbnailDimension.setSize(width, height);
+                LOG.info("use width and height from query param, width: {}, height: {}", width, height);
+            }
+            catch (Exception e) {
+                LOG.error("exception occurred when getting width/height from query param, use default, {}",
+                        e.getMessage());
+            }
+        }
+        return thumbnailDimension;
+    }
 }

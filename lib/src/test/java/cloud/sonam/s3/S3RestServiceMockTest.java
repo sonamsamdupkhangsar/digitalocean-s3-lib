@@ -17,9 +17,13 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.BodyInserters;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
@@ -31,6 +35,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.time.Duration;
+import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -95,12 +100,13 @@ public class S3RestServiceMockTest {
 
         Mockito.doReturn(Mono.just(video.getURL())).when(s3Service).createPresignedUrl(Mockito.any(Mono.class));
 
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", video);
+
         client.post().uri("/upload?uploadType=video")
-                .header("filename", video.getFilename())
-                .header("format", "video/mp4")
                 .header("acl", "private")
-                .header(HttpHeaders.CONTENT_LENGTH, ""+video.contentLength())
-                .bodyValue(video)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(body))
                 .exchange().expectStatus().isOk()
                 .expectBody(String.class)
                 .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));
@@ -139,12 +145,13 @@ public class S3RestServiceMockTest {
 
         Mockito.doReturn(Mono.just(langurPhoto.getURL())).when(s3Service).createPresignedUrl(Mockito.any(Mono.class));
 
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", langurPhoto);
+
         client.post().uri("/upload?uploadType=photo")
-                .header("filename", langurPhoto.getFilename())
-                .header("format", "image/jpg")
                 .header("acl", "private")
-                .header(HttpHeaders.CONTENT_LENGTH, ""+langurPhoto.contentLength())
-                .bodyValue(langurPhoto)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(body))
                 .exchange().expectStatus().isOk()
                 .expectBody(String.class)
                 .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));
@@ -181,12 +188,13 @@ public class S3RestServiceMockTest {
         //send the langurPhoto inputstream when inputStream is request from mockUrl
         when(mockUrl.openStream()).thenReturn(this.langurPhoto.getInputStream());
 
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", langurPhoto);
+
         client.post().uri("/upload?uploadType=file")
-                .header("filename", langurPhoto.getFilename())
-                .header("format", "image/jpg")
                 .header("acl", "private")
-                .header(HttpHeaders.CONTENT_LENGTH, ""+langurPhoto.contentLength())
-                .bodyValue(langurPhoto)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(body))
                 .exchange().expectStatus().isOk()
                 .expectBody(String.class)
                 .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));

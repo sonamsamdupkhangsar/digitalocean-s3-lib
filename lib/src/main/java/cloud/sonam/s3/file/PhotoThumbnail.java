@@ -1,6 +1,6 @@
 package cloud.sonam.s3.file;
 
-import cloud.sonam.s3.file.util.Thumbnail;
+import cloud.sonam.s3.file.util.ImageUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -37,7 +37,7 @@ public class PhotoThumbnail implements Thumbnail {
             // Load the original image
             BufferedImage originalImage = ImageIO.read(inputStream);
 
-            Dimension dimension = Thumbnail.getScaledDimension(new Dimension(originalImage.getWidth(), originalImage.getHeight()),
+            Dimension dimension = ImageUtil.getScaledDimension(new Dimension(originalImage.getWidth(), originalImage.getHeight()),
                     thumbnail);
 
             int width = (int) dimension.getWidth();

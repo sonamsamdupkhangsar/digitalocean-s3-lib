@@ -1,6 +1,7 @@
 package cloud.sonam.s3.file;
 
 import cloud.sonam.s3.config.S3ClientConfigurationProperties;
+import cloud.sonam.s3.file.util.ImageUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -60,7 +61,7 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
                     LOG.info("filePart: {}", filePart);
                     final String fileName = filePart.filename();
                     MediaType contentType = filePart.headers().getContentType();
-                    final String fileFormat = getFileFormat(contentType, fileName);
+                    final String fileFormat = ImageUtil.getFileFormat(contentType, fileName);
 
                     long fileSize = filePart.headers().getContentLength();
 
@@ -157,20 +158,7 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
                         .bodyValue(throwable.getMessage()));
     }
 
-    private String getFileFormat(MediaType contentType, String filename) {
-        // Use contentType or filename to determine the file format
-        // For example:
-        if (contentType != null && contentType.getType().equals("image")) {
-            return contentType.getSubtype(); // e.g., "jpeg", "png", etc.
-        } else {
-            // Use filename extension if contentType is not reliable
-            String[] parts = filename.split("\\.");
-            if (parts.length > 1) {
-                return parts[parts.length - 1];
-            }
-        }
-        return "unknown"; // Default if format can't be determined
-    }
+
 
     private Dimension getDimension(ServerRequest serverRequest) {
         Dimension thumbnailDimension = new Dimension(s3ClientConfigurationProperties.getThumbnailSize().getWidth(),

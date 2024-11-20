@@ -2,18 +2,30 @@ package cloud.sonam.s3.file.util;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Mono;
+import org.springframework.http.MediaType;
 
-import java.awt.Dimension;
-import java.io.ByteArrayOutputStream;
-import java.net.URL;
+import java.awt.*;
 
-public interface Thumbnail {
-    static final Logger LOG = LoggerFactory.getLogger(Thumbnail.class);
+public class ImageUtil {
+    private static final Logger LOG = LoggerFactory.getLogger(ImageUtil.class);
 
-    Mono<ByteArrayOutputStream> getByteArrayOutputStream(final URL presignedUrl, Dimension dimension, final String format);
+    public static String getFileFormat(MediaType contentType, String filename) {
+        // Use contentType or filename to determine the file format
+        // For example:
+        if (contentType != null && contentType.getType().equals("image")) {
+            return contentType.getSubtype(); // e.g., "jpeg", "png", etc.
+        } else {
+            // Use filename extension if contentType is not reliable
+            String[] parts = filename.split("\\.");
+            if (parts.length > 1) {
+                return parts[parts.length - 1];
+            }
+        }
+        return "unknown"; // Default if format can't be determined
+    }
 
-    static Dimension getScaledDimension(Dimension imgSize, Dimension boundary) {
+
+    public static Dimension getScaledDimension(Dimension imgSize, Dimension boundary) {
         LOG.debug("get scaled dimension for thumbnail");
 
         int originalWidth = imgSize.width;

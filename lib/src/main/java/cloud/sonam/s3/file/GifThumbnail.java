@@ -1,6 +1,6 @@
 package cloud.sonam.s3.file;
 
-import cloud.sonam.s3.file.util.Thumbnail;
+import cloud.sonam.s3.file.util.ImageUtil;
 import com.madgag.gif.fmsware.AnimatedGifEncoder;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
@@ -57,7 +57,7 @@ public class GifThumbnail implements Thumbnail {
             LOG.debug("startFrame: {}, frameRate: {}", startFrame, frameRate);
 
             LOG.debug("frameGrabber.width: {} frameGrabber.height: {}", frameGrabber.getImageWidth(), frameGrabber.getImageHeight());
-            Dimension dimension = Thumbnail.getScaledDimension(new Dimension(frameGrabber.getImageWidth(),
+            Dimension dimension = ImageUtil.getScaledDimension(new Dimension(frameGrabber.getImageWidth(),
                             frameGrabber.getImageHeight()),
                     thumbnail);
 

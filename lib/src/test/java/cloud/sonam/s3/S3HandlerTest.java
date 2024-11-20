@@ -110,7 +110,7 @@ public class S3HandlerTest {
 
         final String folder = ""; // no specific folder just use default one
         Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "video", video.getFilename(),  "video/mp4",
-                OptionalLong.of(video.contentLength()), folder, ObjectCannedACL.PRIVATE, new Dimension(100, 100));
+                video.contentLength(), folder, ObjectCannedACL.PRIVATE, new Dimension(100, 100));
 
         StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
             assertTrue(serverResponse.statusCode().is2xxSuccessful());
@@ -157,7 +157,7 @@ public class S3HandlerTest {
 
         final String folder = ""; // no specific folder just use default one
         Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "photo", langurPhoto.getFilename(),
-                "image/jpg", OptionalLong.of(langurPhoto.contentLength()), folder, ObjectCannedACL.PRIVATE,new Dimension(100, 100));
+                "image/jpg", langurPhoto.contentLength(), folder, ObjectCannedACL.PRIVATE,new Dimension(100, 100));
 
         StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
             assertTrue(serverResponse.statusCode().is2xxSuccessful());
@@ -202,7 +202,7 @@ public class S3HandlerTest {
 
         final String folder = ""; // no specific folder just use default one
         Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "file", langurPhoto.getFilename(),
-                "image/jpg", OptionalLong.of(langurPhoto.contentLength()), folder, ObjectCannedACL.PRIVATE, null);
+                "image/jpg", langurPhoto.contentLength(), folder, ObjectCannedACL.PRIVATE, null);
 
         StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
             assertTrue(serverResponse.statusCode().is2xxSuccessful());
@@ -216,6 +216,9 @@ public class S3HandlerTest {
     public void getPresignUrl() {
         LOG.info("create presign url");
 
+        LOG.info("thumbnailHeight: {}, thumbnailWidth: {}",
+                s3ClientConfigurationProperties.getThumbnailSize().getHeight(),
+                s3ClientConfigurationProperties.getThumbnailSize().getWidth());
         Mono<ServerResponse> serverResponseMono = s3Handler.getPresignUrl(Mono.just("videoapp/1/video/2022-06-13T11:23:44.893698.mp4"));
 
         StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {

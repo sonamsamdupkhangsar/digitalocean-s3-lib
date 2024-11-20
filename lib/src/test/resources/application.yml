@@ -31,3 +31,6 @@ aws:
     imageAclHeader: x-amz-acl
     imageAclValue: public-read
     presignDurationInMinutes: 60
+    thumbnailSize:
+      width: 100
+      height: 100

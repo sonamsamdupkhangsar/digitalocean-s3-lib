@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -109,7 +110,7 @@ public class S3HandlerTest {
         Flux<ByteBuffer> byteBufferFlux = Flux.just(ByteBuffer.wrap(video.getContentAsByteArray()));
 
         final String folder = ""; // no specific folder just use default one
-        Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "video", video.getFilename(),  "video/mp4",
+        Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "video", video.getFilename(), MediaType.valueOf("video/mp4"),
                 video.contentLength(), folder, ObjectCannedACL.PRIVATE, new Dimension(100, 100));
 
         StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
@@ -157,7 +158,7 @@ public class S3HandlerTest {
 
         final String folder = ""; // no specific folder just use default one
         Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "photo", langurPhoto.getFilename(),
-                "image/jpg", langurPhoto.contentLength(), folder, ObjectCannedACL.PRIVATE,new Dimension(100, 100));
+                MediaType.valueOf("image/jpg"), langurPhoto.contentLength(), folder, ObjectCannedACL.PRIVATE,new Dimension(100, 100));
 
         StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
             assertTrue(serverResponse.statusCode().is2xxSuccessful());
@@ -202,7 +203,7 @@ public class S3HandlerTest {
 
         final String folder = ""; // no specific folder just use default one
         Mono<ServerResponse> serverResponseMono = s3Handler.upload(byteBufferFlux, "file", langurPhoto.getFilename(),
-                "image/jpg", langurPhoto.contentLength(), folder, ObjectCannedACL.PRIVATE, null);
+                MediaType.valueOf("image/jpg"), langurPhoto.contentLength(), folder, ObjectCannedACL.PRIVATE, null);
 
         StepVerifier.create(serverResponseMono).expectNextMatches(serverResponse -> {
             assertTrue(serverResponse.statusCode().is2xxSuccessful());

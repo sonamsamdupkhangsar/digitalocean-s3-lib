@@ -7,6 +7,7 @@ import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -22,7 +23,7 @@ public class GifThumbnail implements Thumbnail {
     private static final Logger LOG = LoggerFactory.getLogger(GifThumbnail.class);
 
     @Override
-    public Mono<ByteArrayOutputStream> getByteArrayOutputStream(URL presignedUrl, Dimension dimension, String format) {
+    public Mono<ByteArrayOutputStream> getByteArrayOutputStream(URL presignedUrl, Dimension dimension, MediaType mediaType) {
         try {
             LOG.info("open pre-signed url stream");
             InputStream inputStream = presignedUrl.openStream();

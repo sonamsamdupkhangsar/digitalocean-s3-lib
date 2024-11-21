@@ -62,7 +62,7 @@ public class S3RestServiceTest {
         assertThat("hello").isEqualTo("hello");
     }
 
-   // @Test
+    //@Test
     public void uploadVideoFile() throws IOException, InterruptedException {
         LOG.info("video: {}", video);
         Assert.assertNotNull(video);

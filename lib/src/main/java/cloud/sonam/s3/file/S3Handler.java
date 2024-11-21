@@ -81,12 +81,12 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
                     LOG.info("fileName: {}, fileFormat: {}, fileSize: {}", fileName, fileFormat, fileSize);
                     Flux<ByteBuffer> byteBufferFlux = filePart.content().flatMapSequential(dataBuffer -> Flux.fromIterable(dataBuffer::readableByteBuffers));
 
-                    return upload(byteBufferFlux, uploadType, fileName, fileFormat, fileSize, folder, acl, thumbnailDimension);
+                    return upload(byteBufferFlux, uploadType, fileName, contentType, fileSize, folder, acl, thumbnailDimension);
                 });
     }
 
     public Mono<ServerResponse> upload(Flux<ByteBuffer> byteBufferFlux, final String uploadType, final String fileName,
-                                       final String format, final long fileContentLength, final String folder,
+                                       final MediaType mediaType, final long fileContentLength, final String folder,
                                        ObjectCannedACL acl, Dimension thumbnail) {
         LOG.info("upload file of type: {}", uploadType);
         LocalDateTime localDateTime = LocalDateTime.now();
@@ -96,11 +96,11 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
             if (uploadType.equals("video")) {
                 final String prefixPath = s3ClientConfigurationProperties.getVideoPath() + folder;
 
-                return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, format, fileContentLength, acl, localDateTime)
+                return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, mediaType, fileContentLength, acl, localDateTime)
                     .doOnNext(s -> LOG.info("Video upload done, creating video thumbnail next."))
                         .flatMap(fileKey -> s3Service.createPresignedUrl(Mono.just(fileKey)))
                         .doOnNext(presignedUrl -> LOG.info("presigned url: {}", presignedUrl))
-                        .flatMap(presigneUrl -> s3Service.createGif(localDateTime, presigneUrl, prefixPath, acl, fileName, format, thumbnail))
+                        .flatMap(presigneUrl -> s3Service.createGif(localDateTime, presigneUrl, prefixPath, acl, fileName, mediaType, thumbnail))
                         .doOnNext(s -> LOG.info("Video thumbnail done."))
                         .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
                         .onErrorResume(throwable -> ServerResponse.badRequest()
@@ -110,11 +110,11 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
             else {
                 final String prefixPath = s3ClientConfigurationProperties.getPhotoPath() + folder;
 
-                return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, format, fileContentLength, acl, localDateTime)
+                return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, mediaType, fileContentLength, acl, localDateTime)
                         .doOnNext(s -> LOG.info("photo upload done, creating photo thumbnail next."))
                         .flatMap(fileKey -> s3Service.createPresignedUrl(Mono.just(fileKey)))
                         .doOnNext(presignedUrl -> LOG.info("presigned url: {}", presignedUrl))
-                        .flatMap(presignedUrl -> s3Service.createPhotoThumbnail(localDateTime, presignedUrl, prefixPath, acl, fileName, format, thumbnail))
+                        .flatMap(presignedUrl -> s3Service.createPhotoThumbnail(localDateTime, presignedUrl, prefixPath, acl, fileName, mediaType, thumbnail))
                         .doOnNext(s -> LOG.info("Photo thumbnail done."))
                         .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
                         .onErrorResume(throwable -> ServerResponse.badRequest()
@@ -125,7 +125,7 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
         else if (uploadType.equalsIgnoreCase("file")) {
             String prefixPath = s3ClientConfigurationProperties.getFilePath();
 
-            return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, format, fileContentLength, acl, localDateTime)
+            return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, mediaType, fileContentLength, acl, localDateTime)
                     .doOnNext(s -> LOG.info("file upload done."))
                     .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
                     .onErrorResume(throwable -> ServerResponse.badRequest()

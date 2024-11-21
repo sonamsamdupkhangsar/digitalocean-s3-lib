@@ -1,5 +1,6 @@
 package cloud.sonam.s3.file;
 
+import cloud.sonam.s3.file.util.ImageUtil;
 import com.madgag.gif.fmsware.AnimatedGifEncoder;
 import jakarta.annotation.PreDestroy;
 import cloud.sonam.s3.config.S3ClientConfigurationProperties;
@@ -8,6 +9,7 @@ import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -72,17 +74,14 @@ public class S3FileUploadService implements S3Service {
         s3Presigner.close();
     }
 
-    public Mono<String> uploadFile(Flux<ByteBuffer> body, String prefixPath, String fileName, String format,
+    public Mono<String> uploadFile(Flux<ByteBuffer> body, String prefixPath, String fileName, MediaType mediaType,
                                    long length, ObjectCannedACL acl, LocalDateTime localDateTime) {
         LOG.info("uploadFile with fileName: {}", fileName);
-        String extension = "";
+        String extension = ImageUtil.getFileFormat(mediaType, fileName);
 
-        if (fileName.contains(".")) {
-            extension = fileName
-                    .substring(fileName.lastIndexOf(".") + 1);
-        }
 
         String fileKey = prefixPath+localDateTime + "." + extension;
+        LOG.info("extension: {}, fileKey: {}, mediaType.toString: {}", extension, fileKey, mediaType.toString());
 
         LOG.debug("accessKeyId: {}, secretAccessKey: {}, endpoint: {}, region: {}, bucket: {}",
                 s3config.getAccessKeyId(), s3config.getSecretAccessKey(),
@@ -92,7 +91,7 @@ public class S3FileUploadService implements S3Service {
 
         Map<String, String> metadata = new HashMap<>();
         metadata.put("Content-Length", ""+length);
-        metadata.put("Content-Type",format);
+        metadata.put("Content-Type",mediaType.toString());
         metadata.put("x-amz-acl", acl.toString());
 
         LOG.info("s3Client: {}", s3client);
@@ -102,7 +101,7 @@ public class S3FileUploadService implements S3Service {
                                 .bucket(s3config.getBucket())
                                 .contentLength(length)
                                 .key(fileKey)
-                                .contentType(format)
+                                .contentType(mediaType.toString())
                                 .metadata(metadata)
                                 .acl(acl)
                                 .build(),
@@ -118,11 +117,11 @@ public class S3FileUploadService implements S3Service {
     @Override
     public Mono<String> createPhotoThumbnail(LocalDateTime localDateTime, final URL presignedUrl,
                                              final String prefixPath, ObjectCannedACL acl,
-                                             final String fileName, String format,
+                                             final String fileName, MediaType mediaType,
                                              Dimension thumbnail) {
         LOG.info("Create thumbnail for photo presignedUrl: {}", presignedUrl);
 
-        Mono<ByteArrayOutputStream> byteArrayOutputStreamMono = photoThumbnail.getByteArrayOutputStream(presignedUrl, thumbnail, format);
+        Mono<ByteArrayOutputStream> byteArrayOutputStreamMono = photoThumbnail.getByteArrayOutputStream(presignedUrl, thumbnail, mediaType);
 
         final String thumbnailPrefixPath = prefixPath + "thumbnail/";
 
@@ -130,24 +129,25 @@ public class S3FileUploadService implements S3Service {
             byte[] bytes = byteArrayOutputStream.toByteArray();
             ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
             Flux<ByteBuffer> byteBufferFlux = Flux.just(byteBuffer);
-            return uploadFile(byteBufferFlux, thumbnailPrefixPath, fileName, format, byteBuffer.capacity(), acl, localDateTime);
+            return uploadFile(byteBufferFlux, thumbnailPrefixPath, fileName, mediaType, byteBuffer.capacity(), acl, localDateTime);
         });
     }
 
 
     @Override
     public Mono<String> createGif(LocalDateTime localDateTime, URL presignedUrl, final String prefixPath,
-                                 ObjectCannedACL acl, final String fileName, String format,
+                                 ObjectCannedACL acl, final String fileName, MediaType mediaType,
                                   Dimension dimension) {
         try {
-            Mono<ByteArrayOutputStream> byteArrayOutputStreamMono = gifThumbnail.getByteArrayOutputStream(presignedUrl, dimension, format);
+            Mono<ByteArrayOutputStream> byteArrayOutputStreamMono = gifThumbnail.getByteArrayOutputStream(presignedUrl, dimension, mediaType);
             final String thumbnailPrefixPath = prefixPath + "thumbnail/";
 
             return byteArrayOutputStreamMono.flatMap(byteArrayOutputStream -> {
                 byte[] bytes = byteArrayOutputStream.toByteArray();
                 ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
                 Flux<ByteBuffer> byteBufferFlux = Flux.just(byteBuffer);
-                return uploadFile(byteBufferFlux, thumbnailPrefixPath, fileName, format, bytes.length, acl, localDateTime);
+
+                return uploadFile(byteBufferFlux, thumbnailPrefixPath, fileName, MediaType.IMAGE_JPEG, bytes.length, acl, localDateTime);
             });
         }
         catch (Exception e) {

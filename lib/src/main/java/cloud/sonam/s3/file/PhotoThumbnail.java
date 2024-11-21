@@ -3,6 +3,7 @@ package cloud.sonam.s3.file;
 import cloud.sonam.s3.file.util.ImageUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -19,18 +20,8 @@ public class PhotoThumbnail implements Thumbnail {
     private static final Logger LOG = LoggerFactory.getLogger(PhotoThumbnail.class);
 
     @Override
-    public Mono<ByteArrayOutputStream> getByteArrayOutputStream(final URL presignedUrl, Dimension thumbnail, final String format) {
+    public Mono<ByteArrayOutputStream> getByteArrayOutputStream(final URL presignedUrl, Dimension thumbnail, final MediaType format) {
         try {
-            String[] formatArray = format.split("/");
-            String formatName   = "jpg";
-
-            if (formatArray.length == 2) {
-                LOG.info("file extension used will be {}", formatArray[1]);
-                formatName = formatArray[1];
-            }
-            else {
-                LOG.info("invalid file extension, assuming jpg");
-            }
 
             InputStream inputStream = presignedUrl.openStream();
 
@@ -60,7 +51,8 @@ public class PhotoThumbnail implements Thumbnail {
             graphics.dispose();
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ImageIO.write(thumbnailImage, formatName, baos);
+            LOG.info("format.subType: {}", format.getSubtype());
+            ImageIO.write(thumbnailImage, format.getSubtype(), baos);
 
             LOG.info("Thumbnail created successfully.");
 

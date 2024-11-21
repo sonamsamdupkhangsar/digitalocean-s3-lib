@@ -4,12 +4,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import software.amazon.awssdk.regions.Region;
 
 import java.net.URI;
 
-@Profile("default")
 @Configuration
 @ConfigurationProperties(prefix = "aws.s3")
 

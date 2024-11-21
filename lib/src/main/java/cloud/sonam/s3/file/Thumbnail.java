@@ -12,6 +12,6 @@ import java.net.URL;
 public interface Thumbnail {
     static final Logger LOG = LoggerFactory.getLogger(Thumbnail.class);
 
-    Mono<ByteArrayOutputStream> getByteArrayOutputStream(final URL presignedUrl, Dimension dimension, final String format);
+    Mono<ByteArrayOutputStream> getByteArrayOutputStream(final URL presignedUrl, Dimension dimension, final MediaType format);
 
 }

@@ -23,17 +23,14 @@ repositories {
 dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
-
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     api("org.springframework.boot:spring-boot-starter-webflux")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     api("io.projectreactor:reactor-test:3.6.5")
     api("software.amazon.awssdk:s3:2.17.195")
     api("software.amazon.awssdk:netty-nio-client:2.17.195")
-    api("net.coobird:thumbnailator:0.4.14")
     api("org.bytedeco:javacv-platform:1.5.7")
     api("com.madgag:animated-gif-lib:1.4")
-
     testImplementation("junit:junit:4.13.2")
     implementation("org.projectlombok:lombok:1.18.20")
 

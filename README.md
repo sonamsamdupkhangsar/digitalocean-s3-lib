@@ -138,7 +138,7 @@ When browsing with DigitalOcean control panel you can find DigitalOcean Spaces O
 If you click on the `Bucket Name` link, you will see the folders for your project:
 ![Project Folders](docs/bucketfolders.png).
 
-So the fileKey will be the path after the bucket, a folder.  So from my [example](#Examples), the fileKey will be `videos/2024-11-22/thumbnail/2024-11-22T08:15:40.314460.jpeg` and the bucket value is `digitalocean-s3-lib`, acting as the root folder in my DigitalOcean Spaces.  
+So the fileKey will be the path after the bucket, a folder.  So from my [example](#Examples), for thumbnail images of the video file, the fileKey is `videos/2024-11-22/thumbnail/2024-11-22T08:15:40.314460.jpeg` and the bucket value is `digitalocean-s3-lib`, acting as the root folder in my DigitalOcean Spaces.  
 
 If you run the test cases in `S3RestServiceTest` with DO (DigitalOcean Spaces) configuration values the video type files will be uploaded to video folder ![Project Folder](docs/project-folder.png):
 

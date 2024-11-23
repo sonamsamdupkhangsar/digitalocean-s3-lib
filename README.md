@@ -103,3 +103,44 @@ public enum ObjectCannedACL {
 ```
 
 I have only tested with `private` and `public-read` only. 
+
+## Examples
+The `S3Service.class` has a `uploadFile()` method that will return fileKey.  This fileKey can be used to generate a pre-signed url passing it to `S3Service.class` `createPresignedUrl(Mono<String> fileKeyMono);`  method.
+For example, the `uploadFile` method will return a filekey such as 
+ `videos/2024-11-22/thumbnail/2024-11-22T08:15:40.314460.jpeg` for the bucket from property
+ `${aws.s3.bucket}`.
+
+The following is a small block of code from the `uploadFile` method that shows bucket and fileKey set using the aws s3 api:
+```
+CompletableFuture future = s3client
+.putObject(PutObjectRequest.builder()
+.bucket(s3config.getBucket())
+.contentLength(length)
+.key(fileKey)
+.contentType(mediaType.toString())
+.metadata(metadata)
+.acl(acl)
+.build(),
+AsyncRequestBody.fromPublisher(body));
+return Mono.fromFuture(future).map(response -> {
+    checkResult(response);
+    LOG.info("check response and returning fileKey: {}", fileKey);
+    return fileKey;
+});
+```
+
+## Folders in DigitalOcean Spaces 
+When browsing with DigitalOcean control panel you can find DigitalOcean Spaces Object Storage as follows:
+
+![Spaces Object Storage](docs/spaceshomepage.png)
+
+
+If you click on the `Bucket Name` link, you will see the folders for your project:
+![Project Folders](docs/bucketfolders.png).
+
+So the fileKey will be the path after the bucket, a folder.  So from my [example](#Examples), the fileKey will be `videos/2024-11-22/thumbnail/2024-11-22T08:15:40.314460.jpeg` and the bucket value is `digitalocean-s3-lib`, acting as the root folder in my DigitalOcean Spaces.  
+
+If you run the test cases in `S3RestServiceTest` with DO (DigitalOcean Spaces) configuration values the video type files will be uploaded to video folder ![Project Folder](docs/project-folder.png):
+
+The files in the video folder will look like following:
+![Video files](docs/sub-folder.png)

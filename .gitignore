@@ -30,3 +30,5 @@ digitalocean-s3-lib.iml
 
 # Ignore Gradle build output directory
 build
+
+docs/.DS_Store

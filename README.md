@@ -1,5 +1,5 @@
 # digitalocean-s3-lib
-This is a s3 library for uploading objects to s3 bucket, get presigned url and create thumbnail.  This Java library uses Spring WebFlux and is built and tested for the DigitalOcean Spaces ("S3 Compatible").
+This is a Java  s3 library for uploading objects to s3 bucket, get presigned url and for creating video and photo thumbnail images.  This Java library uses Spring WebFlux and is built and tested for the DigitalOcean Spaces ("S3 Compatible"). It internally uses AWS S3 SDK client.
 
 ## How to use this library
 

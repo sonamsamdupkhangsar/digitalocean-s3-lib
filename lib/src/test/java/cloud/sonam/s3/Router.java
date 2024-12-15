@@ -9,8 +9,8 @@ import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
-import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
-import static org.springframework.web.reactive.function.server.RequestPredicates.accept;
+
+import static org.springframework.web.reactive.function.server.RequestPredicates.*;
 
 /**
  * Router for s3 service
@@ -25,6 +25,7 @@ public class Router {
         return RouterFunctions.route(POST("/upload").and(accept(MediaType.APPLICATION_JSON)),
                 handler::upload)
                 .andRoute(POST("/presignurl").and(accept(MediaType.APPLICATION_JSON)),
-                        handler::getPresignUrl);
+                        handler::getPresignUrl)
+                .andRoute(DELETE("/s3"), handler::delete);
     }
 }

@@ -1,12 +1,8 @@
 package cloud.sonam.s3.file;
 
-import cloud.sonam.s3.file.util.ImageUtil;
-import com.madgag.gif.fmsware.AnimatedGifEncoder;
-import jakarta.annotation.PreDestroy;
 import cloud.sonam.s3.config.S3ClientConfigurationProperties;
-import org.bytedeco.javacv.FFmpegFrameGrabber;
-import org.bytedeco.javacv.Frame;
-import org.bytedeco.javacv.Java2DFrameConverter;
+import cloud.sonam.s3.file.util.ImageUtil;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -16,28 +12,22 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import java.net.URI;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.OptionalLong;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Handler
@@ -180,6 +170,34 @@ public class S3FileUploadService implements S3Service {
         });
     }
 
+    @Override
+    public Mono<String> delete(String key) {
+        LOG.info("delete s3 object with key {}", key);
+
+        CompletableFuture<DeleteObjectResponse> cf = s3client.deleteObject
+                (DeleteObjectRequest.builder().bucket(s3config.getBucket()).key(key).build());
+
+
+        return Mono.fromFuture(cf).map(response -> {
+            try {
+                DeleteObjectResponse deleteObjectResponse = cf.get();
+                LOG.debug("deleteObjectResponse status is {}", deleteObjectResponse.sdkHttpResponse().statusCode());
+
+                if (deleteObjectResponse.sdkHttpResponse() == null || !deleteObjectResponse.sdkHttpResponse().isSuccessful()) {
+                    LOG.error("failed to delete object with key: {}, status: {}",
+                            key, deleteObjectResponse.sdkHttpResponse().statusCode());
+                    return "Failed to delete object with key: " + key;
+                }
+                LOG.info("object deleted successfully using key: {}", key);
+                return key;
+            }
+            catch (InterruptedException | ExecutionException e) {
+                LOG.info("exception occured on deleting with key: "+ key, e);
+                LOG.error("failed to delete object with key {}, exception occured: {}", key, e.getMessage());
+                return "Failed to to delete object with key: "+ e.getMessage();
+            }
+        });
+    }
 
     private PutObjectResponse checkResult(Object result1) {
         PutObjectResponse result = (PutObjectResponse) result1;
@@ -191,6 +209,5 @@ public class S3FileUploadService implements S3Service {
         }
         return result;
     }
-
 
 }

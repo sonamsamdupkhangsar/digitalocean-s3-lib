@@ -17,6 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -62,7 +63,7 @@ public class S3RestServiceTest {
         assertThat("hello").isEqualTo("hello");
     }
 
-    //@Test
+   //@Test
     public void uploadVideoFile() throws IOException, InterruptedException {
         LOG.info("video: {}", video);
         Assert.assertNotNull(video);
@@ -81,7 +82,8 @@ public class S3RestServiceTest {
                 .header("acl", "private")
                 .exchange().expectStatus().isOk()
                 .expectBody(String.class)
-                .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));
+                .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody())
+                );
     }
 
     //@Test
@@ -122,7 +124,16 @@ public class S3RestServiceTest {
                 .header("acl", "private")
                 .exchange().expectStatus().isOk()
                 .expectBody(String.class)
-                .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));
+                .consumeWith(stringEntityExchangeResult -> {
+
+                    LOG.info("result: {}", stringEntityExchangeResult.getResponseBody());
+                    final String key = stringEntityExchangeResult.getResponseBody();
+
+                    client.delete().uri("/s3?key="+key)
+                            .exchange().expectStatus().isOk()
+                            .expectBody(String.class)
+                            .consumeWith(stringEntityExchangeResult2 -> LOG.info("delete response: {}", stringEntityExchangeResult.getResponseBody()));
+                });
     }
 
     //@Test

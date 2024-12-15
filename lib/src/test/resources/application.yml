@@ -25,6 +25,7 @@ aws:
     bucket: mybucket
     endpoint: https://sonam.cloud/endpoint
     subdomain: https://www.sonam.cloud
+    rootPath: digitalocean-s3-lib
     videoPath: videos/
     photoPath: photos/
     filePath: files/

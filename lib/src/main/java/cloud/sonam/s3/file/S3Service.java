@@ -30,4 +30,6 @@ public interface S3Service {
                            final String fileName, MediaType format,
                            Dimension thumbnail);//LocalDateTime localDateTime, URL presignedUrl, final String prefixPath, ObjectCannedACL acl, Dimension thumbnail);
     Mono<URL> createPresignedUrl(Mono<String> fileKeyMono);
+
+    Mono<String> delete(String key);
 }

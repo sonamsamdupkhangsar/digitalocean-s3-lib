@@ -28,12 +28,16 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
@@ -206,6 +210,31 @@ public class S3RestServiceMockTest {
         LOG.info("create presign url");
 
         client.post().uri("/presignurl").bodyValue("videoapp/1/video/2022-06-13T11:23:44.893698.mp4")
+                .exchange().expectStatus().isOk()
+                .expectBody(String.class)
+                .consumeWith(stringEntityExchangeResult -> LOG.info("presignUrl: {}", stringEntityExchangeResult.getResponseBody()));
+
+    }
+
+    @Test
+    public void delete() {
+        LOG.info("delete object by key");
+
+        final String key = "videoapp/1/video/2022-06-13T11:23:44.893698.mp4";
+
+        String keyUrlEncoded = URLEncoder.encode("videoapp/1/video/2022-06-13T11:23:44.893698.mp4", Charset.defaultCharset());
+        LOG.info("keyUrlEncoded: {}", keyUrlEncoded);
+
+        DeleteObjectResponse deleteObjectResponse = Mockito.mock(DeleteObjectResponse.class);
+        SdkHttpResponse sdkHttpResponse = Mockito.mock(SdkHttpResponse.class);
+        when(deleteObjectResponse.sdkHttpResponse()).thenReturn(sdkHttpResponse);
+
+        when(sdkHttpResponse.isSuccessful()).thenReturn(true);
+
+        Mockito.when(s3Client.deleteObject(Mockito.any(DeleteObjectRequest.class)))
+                .thenReturn(CompletableFuture.completedFuture(deleteObjectResponse));
+
+        client.delete().uri("/s3?key="+key)
                 .exchange().expectStatus().isOk()
                 .expectBody(String.class)
                 .consumeWith(stringEntityExchangeResult -> LOG.info("presignUrl: {}", stringEntityExchangeResult.getResponseBody()));

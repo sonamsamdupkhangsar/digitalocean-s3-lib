@@ -17,6 +17,7 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import java.util.List;
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -170,9 +171,33 @@ public class S3FileUploadService implements S3Service {
         });
     }
 
+    /**
+     * this will delete all objects in a prefix.
+     * If the prefix contains path or folder like object then it will also delete them.
+     * @param prefix
+     * @return
+     */
     @Override
-    public Mono<String> delete(String key) {
-        LOG.info("delete s3 object with key {}", key);
+    public Mono<String> deleteFolder(String prefix) {
+        LOG.info("delete s3 using a prefix {}", prefix);
+
+        CompletableFuture<ListObjectsResponse> listObjectsResponseCompletableFuture =
+                s3client.listObjects(ListObjectsRequest.builder().bucket(s3config.getBucket()).prefix(prefix).build());
+
+        return Mono.fromFuture(listObjectsResponseCompletableFuture).map(response -> {
+            LOG.info("contents: {}", response.contents());
+
+            List<S3Object> list = response.contents();
+            for (S3Object s3Object : list) {
+                LOG.info("found s3 object");
+                deleteObject(s3Object.key()).doOnNext(s -> LOG.info("response for delete is {}", s));
+            }
+            return "deleted "+ list.size() + " objects";
+        });
+    }
+
+    @Override
+    public Mono<String> deleteObject(String key) {
 
         CompletableFuture<DeleteObjectResponse> cf = s3client.deleteObject
                 (DeleteObjectRequest.builder().bucket(s3config.getBucket()).key(key).build());

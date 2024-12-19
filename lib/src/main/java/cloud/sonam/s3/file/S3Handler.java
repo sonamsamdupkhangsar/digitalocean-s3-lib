@@ -158,8 +158,33 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
                         .bodyValue(throwable.getMessage()));
     }
 
+    /**
+     * this is for deleting all objects in a prefix.  The prefix is like a path and if they contain another like folder
+     * it will also delete them as objects.  So this works for objects and folder like objects too.
+     * @param serverRequest
+     * @return
+     */
     @Override
-    public Mono<ServerResponse> delete(ServerRequest serverRequest) {
+    public Mono<ServerResponse> deleteByPrefix(ServerRequest serverRequest) {
+        LOG.info("got a request for delete s3 folder by prefix");
+
+        if (serverRequest.queryParam("prefix").isEmpty()) {
+            LOG.error("prefix query param is empty");
+            return ServerResponse.badRequest().contentType(MediaType.APPLICATION_JSON).bodyValue("missing prefix");
+        }
+
+        final String prefix = serverRequest.queryParam("prefix").get();
+
+        LOG.info("got prefix from queryParam: {}", prefix);
+        return s3Service.deleteFolder(prefix)
+                .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
+                .onErrorResume(throwable -> ServerResponse.badRequest()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(throwable.getMessage()));
+    }
+
+    @Override
+    public Mono<ServerResponse> deleteObject(ServerRequest serverRequest) {
         LOG.info("got a request for delete s3 object by key");
 
         if (serverRequest.queryParam("key").isEmpty()) {
@@ -169,7 +194,7 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
         final String key = serverRequest.queryParam("key").get();
 
         LOG.info("got key from queryParam: {}", key);
-        return s3Service.delete(key)
+        return s3Service.deleteObject(key)
                 .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
                 .onErrorResume(throwable -> ServerResponse.badRequest()
                         .contentType(MediaType.APPLICATION_JSON)

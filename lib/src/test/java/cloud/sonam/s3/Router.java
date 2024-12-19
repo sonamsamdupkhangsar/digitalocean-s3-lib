@@ -26,6 +26,7 @@ public class Router {
                 handler::upload)
                 .andRoute(POST("/presignurl").and(accept(MediaType.APPLICATION_JSON)),
                         handler::getPresignUrl)
-                .andRoute(DELETE("/s3"), handler::delete);
+                .andRoute(DELETE("/s3/object"), handler::deleteObject)
+                .andRoute(DELETE("/s3/folder"), handler::deleteByPrefix);
     }
 }

@@ -6,6 +6,7 @@ import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,18 +23,25 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
+import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.mockito.Mockito.when;
 
 
 /**
  * This will run the actual s3 service that will upload a file to a live s3 bucket.
- * The tests are commented out for that reason.
+ * The tests are commented out for that reason.  Put the actual valus in the application.yml
  */
 
 @EnableAutoConfiguration
@@ -63,7 +71,7 @@ public class S3RestServiceTest {
         assertThat("hello").isEqualTo("hello");
     }
 
-   //@Test
+  // @Test
     public void uploadVideoFile() throws IOException, InterruptedException {
         LOG.info("video: {}", video);
         Assert.assertNotNull(video);
@@ -106,7 +114,7 @@ public class S3RestServiceTest {
                 .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));
     }
 
-    //@Test
+   // @Test
     public void uploadFile() throws IOException, InterruptedException {
         LOG.info("photo: {}", langurPhoto);
         Assert.assertNotNull(langurPhoto);
@@ -129,11 +137,26 @@ public class S3RestServiceTest {
                     LOG.info("result: {}", stringEntityExchangeResult.getResponseBody());
                     final String key = stringEntityExchangeResult.getResponseBody();
 
-                    client.delete().uri("/s3?key="+key)
+                    client.delete().uri("/s3/object?key="+key)
                             .exchange().expectStatus().isOk()
                             .expectBody(String.class)
                             .consumeWith(stringEntityExchangeResult2 -> LOG.info("delete response: {}", stringEntityExchangeResult.getResponseBody()));
                 });
+    }
+
+    //this test will delete all objects given on the prefix
+    //it will also delete objects that act like folders.
+   // @Test
+    public void deleteFolder() {
+        LOG.info("delete object by prefix");
+
+        final String prefix = "digitalocean-s3-lib/photos/2024-12-19";
+
+        client.delete().uri("/s3/folder?prefix="+prefix)
+                .exchange().expectStatus().isOk()
+                .expectBody(String.class)
+                .consumeWith(stringEntityExchangeResult -> LOG.info("delete by folder or prefix response: {}", stringEntityExchangeResult.getResponseBody()));
+
     }
 
     //@Test

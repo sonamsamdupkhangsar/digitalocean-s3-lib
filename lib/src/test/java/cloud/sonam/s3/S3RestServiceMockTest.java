@@ -28,10 +28,7 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.IOException;
 import java.net.URI;
@@ -217,7 +214,7 @@ public class S3RestServiceMockTest {
     }
 
     @Test
-    public void delete() {
+    public void deleteObject() {
         LOG.info("delete object by key");
 
         final String key = "videoapp/1/video/2022-06-13T11:23:44.893698.mp4";
@@ -234,7 +231,32 @@ public class S3RestServiceMockTest {
         Mockito.when(s3Client.deleteObject(Mockito.any(DeleteObjectRequest.class)))
                 .thenReturn(CompletableFuture.completedFuture(deleteObjectResponse));
 
-        client.delete().uri("/s3?key="+key)
+        client.delete().uri("/s3/object?key="+key)
+                .exchange().expectStatus().isOk()
+                .expectBody(String.class)
+                .consumeWith(stringEntityExchangeResult -> LOG.info("presignUrl: {}", stringEntityExchangeResult.getResponseBody()));
+
+    }
+
+    @Test
+    public void deleteFolder() {
+        LOG.info("delete object by key");
+
+        final String prefix = "videoapp/1/video/";
+
+        String keyUrlEncoded = URLEncoder.encode("videoapp/1/video/2022-06-13T11:23:44.893698.mp4", Charset.defaultCharset());
+        LOG.info("keyUrlEncoded: {}", keyUrlEncoded);
+
+        ListObjectsResponse listObjectsResponse = Mockito.mock(ListObjectsResponse.class);
+        SdkHttpResponse sdkHttpResponse = Mockito.mock(SdkHttpResponse.class);
+        when(listObjectsResponse.sdkHttpResponse()).thenReturn(sdkHttpResponse);
+
+        when(sdkHttpResponse.isSuccessful()).thenReturn(true);
+
+        Mockito.when(s3Client.listObjects(Mockito.any(ListObjectsRequest.class)))
+                .thenReturn(CompletableFuture.completedFuture(listObjectsResponse));
+
+        client.delete().uri("/s3/folder?prefix="+prefix)
                 .exchange().expectStatus().isOk()
                 .expectBody(String.class)
                 .consumeWith(stringEntityExchangeResult -> LOG.info("presignUrl: {}", stringEntityExchangeResult.getResponseBody()));

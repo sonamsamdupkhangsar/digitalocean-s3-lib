@@ -10,4 +10,6 @@ import reactor.core.publisher.Mono;
 public interface S3WebRequestHandler {
     Mono<ServerResponse> upload(ServerRequest serverRequest);
     Mono<ServerResponse> getPresignUrl(ServerRequest serverRequest);
+    Mono<ServerResponse> deleteObject(ServerRequest serverRequest);
+    Mono<ServerResponse> deleteByPrefix(ServerRequest serverRequest);
 }

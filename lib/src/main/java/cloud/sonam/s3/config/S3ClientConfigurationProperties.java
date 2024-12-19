@@ -25,7 +25,7 @@ public class S3ClientConfigurationProperties {
 
     // this resolves to a folder name, not the actual s3 bucket (confusing ?)
     private String bucket;
-
+    private String rootPath;
     private String videoPath;
     private String photoPath;
     private String filePath;
@@ -167,6 +167,13 @@ public class S3ClientConfigurationProperties {
         this.thumbnailSize = thumbnailSize;
     }
 
+    public String getRootPath() {
+        return rootPath;
+    }
+
+    public void setRootPath(String rootPath) {
+        this.rootPath = rootPath;
+    }
 
     public static class ThumbnailSize {
         private int width;

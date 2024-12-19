@@ -30,4 +30,9 @@ public interface S3Service {
                            final String fileName, MediaType format,
                            Dimension thumbnail);//LocalDateTime localDateTime, URL presignedUrl, final String prefixPath, ObjectCannedACL acl, Dimension thumbnail);
     Mono<URL> createPresignedUrl(Mono<String> fileKeyMono);
+
+    Mono<String> deleteObject(String key);
+    //this will delete all objects in a prefix
+    //if prefix contains a folder like object it will also delete them.
+    Mono<String> deleteFolder(String prefix);
 }

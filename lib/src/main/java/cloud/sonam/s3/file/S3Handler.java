@@ -94,7 +94,7 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
         if (uploadType.equalsIgnoreCase("video") || uploadType.equalsIgnoreCase("photo")) {
 
             if (uploadType.equals("video")) {
-                final String prefixPath = s3ClientConfigurationProperties.getVideoPath() + folder;
+                final String prefixPath = s3ClientConfigurationProperties.getRootPath() + s3ClientConfigurationProperties.getVideoPath() + folder;
 
                 return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, mediaType, fileContentLength, acl, localDateTime)
                     .doOnNext(s -> LOG.info("Video upload done, creating video thumbnail next."))
@@ -108,7 +108,7 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
                                 .bodyValue(throwable.getMessage()));
             }
             else {
-                final String prefixPath = s3ClientConfigurationProperties.getPhotoPath() + folder;
+                final String prefixPath = s3ClientConfigurationProperties.getRootPath() + s3ClientConfigurationProperties.getPhotoPath() + folder;
 
                 return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, mediaType, fileContentLength, acl, localDateTime)
                         .doOnNext(s -> LOG.info("photo upload done, creating photo thumbnail next."))
@@ -123,7 +123,7 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
             }
         }
         else if (uploadType.equalsIgnoreCase("file")) {
-            String prefixPath = s3ClientConfigurationProperties.getFilePath();
+            String prefixPath = s3ClientConfigurationProperties.getRootPath() + s3ClientConfigurationProperties.getFilePath();
 
             return s3Service.uploadFile(byteBufferFlux, prefixPath, fileName, mediaType, fileContentLength, acl, localDateTime)
                     .doOnNext(s -> LOG.info("file upload done."))
@@ -158,6 +158,48 @@ public class S3Handler implements S3WebRequestHandler, S3ServiceHandler {
                         .bodyValue(throwable.getMessage()));
     }
 
+    /**
+     * this is for deleting all objects in a prefix.  The prefix is like a path and if they contain another like folder
+     * it will also delete them as objects.  So this works for objects and folder like objects too.
+     * @param serverRequest
+     * @return
+     */
+    @Override
+    public Mono<ServerResponse> deleteByPrefix(ServerRequest serverRequest) {
+        LOG.info("got a request for delete s3 folder by prefix");
+
+        if (serverRequest.queryParam("prefix").isEmpty()) {
+            LOG.error("prefix query param is empty");
+            return ServerResponse.badRequest().contentType(MediaType.APPLICATION_JSON).bodyValue("missing prefix");
+        }
+
+        final String prefix = serverRequest.queryParam("prefix").get();
+
+        LOG.info("got prefix from queryParam: {}", prefix);
+        return s3Service.deleteFolder(prefix)
+                .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
+                .onErrorResume(throwable -> ServerResponse.badRequest()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(throwable.getMessage()));
+    }
+
+    @Override
+    public Mono<ServerResponse> deleteObject(ServerRequest serverRequest) {
+        LOG.info("got a request for delete s3 object by key");
+
+        if (serverRequest.queryParam("key").isEmpty()) {
+            return ServerResponse.badRequest().contentType(MediaType.APPLICATION_JSON).bodyValue("missing key");
+        }
+
+        final String key = serverRequest.queryParam("key").get();
+
+        LOG.info("got key from queryParam: {}", key);
+        return s3Service.deleteObject(key)
+                .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
+                .onErrorResume(throwable -> ServerResponse.badRequest()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(throwable.getMessage()));
+    }
 
 
     private Dimension getDimension(ServerRequest serverRequest) {

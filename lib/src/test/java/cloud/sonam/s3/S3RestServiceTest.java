@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -43,7 +44,7 @@ import static org.mockito.Mockito.when;
  * This will run the actual s3 service that will upload a file to a live s3 bucket.
  * The tests are commented out for that reason.  Put the actual valus in the application.yml
  */
-
+@AutoConfigureWebTestClient
 @EnableAutoConfiguration
 @RunWith(SpringRunner.class)
 @ExtendWith(SpringExtension.class)

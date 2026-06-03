@@ -10,8 +10,8 @@ plugins {
     `java-library`
     id("maven-publish")
 
-    id("org.springframework.boot") version "3.2.7" // Replace with your desired version
-    id("io.spring.dependency-management") version "1.1.3" // Dependency management plugin
+    id("org.springframework.boot") version "4.0.0" // Replace with your desired version
+    id("io.spring.dependency-management") version "1.1.7" // Dependency management plugin
 }
 
 repositories {
@@ -21,25 +21,24 @@ repositories {
 }
 
 dependencies {
-    // Use JUnit Jupiter for testing.
-    testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     api("org.springframework.boot:spring-boot-starter-webflux")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
     api("io.projectreactor:reactor-test:3.6.5")
     api("software.amazon.awssdk:s3:2.29.31")
     api("software.amazon.awssdk:netty-nio-client:2.29.31")
     api("org.bytedeco:javacv-platform:1.5.7")
     api("com.madgag:animated-gif-lib:1.4")
-    testImplementation("junit:junit:4.13.2")
     implementation("org.projectlombok:lombok:1.18.20")
-
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation ("org.springframework.boot:spring-boot-starter-webflux-test")
+    testImplementation ("org.junit.jupiter:junit-jupiter-api")
+    testRuntimeOnly ("org.junit.jupiter:junit-jupiter-engine")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 
@@ -64,7 +63,7 @@ publishing {
             from(components["java"])
             groupId = "cloud.sonam"
             artifactId = "digitalocean-s3-lib"
-            version = "1.0.0-SNAPSHOT"
+            version = "1.0.1-SNAPSHOT"
         }
     }
 }

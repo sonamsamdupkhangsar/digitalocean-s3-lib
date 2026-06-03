@@ -13,11 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -45,7 +45,7 @@ import static org.mockito.Mockito.when;
 /**
  * This will test the Router endpoints for uploading files, create thumbnail and get presign url
  */
-
+@AutoConfigureWebTestClient
 @EnableAutoConfiguration
 @RunWith(SpringRunner.class)
 @ExtendWith(SpringExtension.class)
@@ -62,13 +62,13 @@ public class S3RestServiceMockTest {
     @Value("classpath:langur.jpg")
     private Resource langurPhoto;
 
-    @MockBean
+    @MockitoBean
     private S3AsyncClient s3Client;
 
     @Autowired
     private S3ClientConfigurationProperties s3ClientConfigurationProperties;
 
-    @SpyBean
+    @MockitoSpyBean
     private S3FileUploadService s3Service;
 
     @Test
